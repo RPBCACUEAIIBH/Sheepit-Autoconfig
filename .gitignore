@@ -1,0 +1,7 @@
+WD-CPU/*
+WD-GPU/*
+.sheepit-cpu.conf
+.sheepit-gpu.conf
+.SilencerCPU
+.SilencerGPU
+ToDo

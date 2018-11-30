@@ -310,6 +310,8 @@ then
     cp ./sheepit-cpu.conf ./.sheepit-cpu.conf
     sed -i "s/AUTO_CORE_COUNT/$CPUs/g" ./.sheepit-cpu.conf
     sed -i "s/AUTO_RAM/$AUTORAMCPU/g" ./.sheepit-cpu.conf
+    HOSTNAME="$(uname -a | awk '{ print $2 }')_CPU"
+    sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-cpu.conf
     echo ""
     echo "Auto-config for CPU instance: $CPUs CPU cores, and $(( $AUTORAMCPU / 1000 )) MB of memory."
   fi
@@ -322,6 +324,8 @@ then
     cp ./sheepit-cpu_gpu.conf ./.sheepit-cpu.conf
     sed -i "s/AUTO_CORE_COUNT/$CPUs/g" ./.sheepit-cpu.conf
     sed -i "s/AUTO_RAM/$AUTORAMCPU/g" ./.sheepit-cpu.conf
+    HOSTNAME="$(uname -a | awk '{ print $2 }')"
+    sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-cpu.conf
     echo ""
     echo "Auto-config for single instance: $CPUs CPU cores, and $(( $AUTORAMCPU / 1000 )) MB of memory, and will render with either CPU or GPU."
   fi
@@ -333,6 +337,8 @@ then
     fi
     cp ./sheepit-gpu.conf ./.sheepit-gpu.conf
     sed -i "s/AUTO_RAM/$AUTORAMGPU/g" ./.sheepit-gpu.conf
+    HOSTNAME="$(uname -a | awk '{ print $2 }')_GPU"
+    sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-cpu.conf
     echo ""
     echo "Auto-config for GPU instance: 1 CPU cores, and $(( $AUTORAMGPU / 1000 )) MB of memory."
   fi
