@@ -244,11 +244,14 @@ then
   fi
 fi
 echo "Available memory: ~$(( $MemAvailable / 1000 ))MB"
-if [[ $(java -jar $(pwd)/sheepit-client-*.jar --show-gpu | grep "CUDA Name :") ]]
+if [[ ! -z $(java -jar $(pwd)/sheepit-client-*.jar --show-gpu | grep "Id") ]]
 then
   GPU=true
+# I don't know exactly how AMD/Intel GPUs supposed to show up, but help says "Name of the GPU used for the render, for example CUDA_0 for Nvidia or OPENCL_0 for AMD/Intel card" I don't have an AMD/Intel GPU to work with, so can't test it.
+  GPUID=$(java -jar $(pwd)/sheepit-client-*.jar --show-gpu | grep "Id" | awk '{ print $3 }')
+  GPUID=$(echo $GPUID | awk '{ print $1 }') # This makes shure that only the first GPUID gets specified in the config file. When I have more then 1 supported GPUs to work with will make it lauunch an instance for all separately.
   CPUs=$(( $CPUs - 1 ))
-  echo "Supported GPU: yes"
+  echo "Supported GPU: yes($GPUID)"
   GPUMem=$(java -jar $(pwd)/sheepit-client-*.jar --show-gpu | grep "Memory" | awk '{ print $3 }')
   echo "Reported video memory: ${GPUMem}MB"
 else
@@ -326,6 +329,7 @@ then
     sed -i "s/AUTO_RAM/$AUTORAMCPU/g" ./.sheepit-cpu.conf
     HOSTNAME="$(uname -a | awk '{ print $2 }')"
     sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-cpu.conf
+    sed -i "s/GPUID/$GPUID/g" ./.sheepit-cpu.conf
     echo ""
     echo "Auto-config for single instance: $CPUs CPU cores, and $(( $AUTORAMCPU / 1000 )) MB of memory, and will render with either CPU or GPU."
   fi
@@ -338,7 +342,8 @@ then
     cp ./sheepit-gpu.conf ./.sheepit-gpu.conf
     sed -i "s/AUTO_RAM/$AUTORAMGPU/g" ./.sheepit-gpu.conf
     HOSTNAME="$(uname -a | awk '{ print $2 }')_GPU"
-    sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-cpu.conf
+    sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-gpu.conf
+    sed -i "s/GPUID/$GPUID/g" ./.sheepit-gpu.conf
     echo ""
     echo "Auto-config for GPU instance: 1 CPU cores, and $(( $AUTORAMGPU / 1000 )) MB of memory."
   fi
