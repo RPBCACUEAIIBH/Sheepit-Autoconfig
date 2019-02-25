@@ -8,6 +8,7 @@ cd $(cd "$(dirname "$0")"; pwd -P)
 # Constant(s) and pre defined variables
 ManualConfig=false
 CommandLine=false
+SilentMode=false
 Facepalm=true # ...I should have tried killing processes without sudo in the first place.
 Permission=false
 CPU=true
@@ -84,6 +85,8 @@ do
                       ;;
                "-c" ) CommandLine=true
                       ;;
+               "-s" ) SilentMode=true
+                      ;;
                "-p" ) shift
                       Proxy=$1
                       ;;
@@ -94,7 +97,8 @@ do
                       ;;
            "--help" ) echo ""
                       echo "Options"
-                      echo "-c                         Specify this for command line operation.(Will launch the instances but not in terminals...)"
+                      echo "-c                         Specify this for command line operation.(Will launch the instances but not in new terminals... This runs via SSH, but will NOT continue running if you close the terminal.)"
+                      echo "-s                         Silent mode... This will launch the instances without any feedback. no need to also specify -c option. (for compatibility with my Systemd-Service-Generator script, which *hopefuly* makes it run automatically at startup...)"
                       echo ""
                       echo "-m                         Use manual config(only if at least one of the config files are completed...)"
                       echo ""
@@ -106,6 +110,20 @@ do
                       echo ""
                       echo "Specify options separately... For eample: It does not currently recognize -mu as separate options. you must specify them as -m -u"
                       echo ""
+                      echo "Since version 1.2 you can make it a systemd service and have your machine autoconfigure and connect automatically at startup!(you may not wanna do that if you're using the machine for anythng else...)"
+                      echo "- Download my Systemd-Service-Generator script from github.com/RPBCACUEAIIBH/Systemd-Service-Generator"
+                      echo "- Run it as root"
+                      echo "- Specify the following settings:"
+                      echo "  - Service name: Sheepit"
+                      echo "  - Startup command: sudo -u [yourusername] /home/[yourusername]/location/Sheepit-Autoconfig/Launch.sh -u [sheepitusename] [key/password] -s"
+                      echo "  - Shutdown command: (leave it empty)"
+                      echo "  - ServiceType: forking"
+                      echo "  - Should the service be considered running when it exits?: no"
+                      echo "  - Would you like to run the service now?: no (you want to reboot, and see if it starts rendering automatically at startup with everything it got autoconfigured...)"
+                      echo "- Reboot, and check if you're rendering... :D"
+                      echo "- You can check the service with: systemctl status Sheepit.service"
+                      echo "- If you mess it up, run Systemd-Service-Generator script again with --cleaup option, and specify the service name: Sheepit"
+                      echo ""
                       exit
                       ;;
         "--version" ) echo ""
@@ -114,7 +132,7 @@ do
                       cat $(pwd)/LICENSE.md
                       exit
                       ;;
-                   *) echo "Error: Unknown option at: case $X!"
+                   *) echo "Error: Unknown option!"
                       exit
                       ;;
   esac
@@ -134,7 +152,10 @@ then
 fi
 
 # Checking java
-echo -n "Checking java: "
+if [[ $SilentMode == false ]]
+then
+  echo -n "Checking java: "
+fi
 if [[ -z $(dpkg -l | grep openjdk) ]]
 then
   echo "Fail"
@@ -160,8 +181,11 @@ then
     exit
   fi
 else
-  echo "Ok"
-  echo ""
+  if [[ $SilentMode == false ]]
+  then
+    echo "Ok"
+    echo ""
+  fi
 fi
 
 # Checking inxi
@@ -232,18 +256,30 @@ fi
 
 # Probing system and preparing for launch
 CPUs=$(grep -c ^processor /proc/cpuinfo)
-echo "Detected CPU cores: $CPUs"
+if [[ $SilentMode == false ]]
+then
+  echo "Detected CPU cores: $CPUs"
+fi
 MemAvailable=$(grep "MemAvailable:" /proc/meminfo | awk '{print $2}')
 if [[ $MemAvailable -lt 2000000 ]]
 then
-  echo "There's no point rendering with less then 2GB of available RAM... It would produce too much out of memory errors..."
+  if [[ $SilentMode == false ]]
+  then
+    echo "There's no point rendering with less then 2GB of available RAM... It would produce too much out of memory errors..."
+  fi
   if [[ $GPU != true ]]
   then
-    echo "Aborting..."
+    if [[ $SilentMode == false ]]
+    then
+      echo "Aborting..."
+    fi
     exit
   fi
 fi
-echo "Available memory: ~$(( $MemAvailable / 1000 ))MB"
+if [[ $SilentMode == false ]]
+then
+  echo "Available memory: ~$(( $MemAvailable / 1000 ))MB"
+fi
 if [[ ! -z $(java -jar $(pwd)/sheepit-client-*.jar --show-gpu | grep "Id") ]]
 then
   GPU=true
@@ -251,16 +287,25 @@ then
   GPUID=$(java -jar $(pwd)/sheepit-client-*.jar --show-gpu | grep "Id" | awk '{ print $3 }')
   GPUID=$(echo $GPUID | awk '{ print $1 }') # This makes shure that only the first GPUID gets specified in the config file. When I have more then 1 supported GPUs to work with will make it lauunch an instance for all separately.
   CPUs=$(( $CPUs - 1 ))
-  echo "Supported GPU: yes($GPUID)"
   GPUMem=$(java -jar $(pwd)/sheepit-client-*.jar --show-gpu | grep "Memory" | awk '{ print $3 }')
-  echo "Reported video memory: ${GPUMem}MB"
+  if [[ $SilentMode == false ]]
+  then
+    echo "Supported GPU: yes($GPUID)"
+    echo "Reported video memory: ${GPUMem}MB"
+  fi
 else
   GPU=false
-  echo "Supported GPU: No"
+  if [[ $SilentMode == false ]]
+  then
+    echo "Supported GPU: No"
+  fi
 fi
 AvailSpace=$(echo $(df -k $(pwd)) | awk '{ print $11 }')
 SheepitSize=$(du -s $(pwd) | awk '{ print $1 }')
-echo "Available disk space: $(( $(( $AvailSpace + $SheepitSize )) / 1000 ))MB"
+if [[ $SilentMode == false ]]
+then
+  echo "Available disk space: $(( $(( $AvailSpace + $SheepitSize )) / 1000 ))MB"
+fi
 
 #Automatic configuration attempt
 if [[ $ManualConfig == false ]]
@@ -269,31 +314,42 @@ then
   then
     if [[ $GPUMem -lt 2000 ]]
     then
-      echo "There's no point rendering with less then 2GB of VRAM! It would produce too much out of memory errors. Falling back to CPU only rendering..."
+      if [[ $SilentMode == false ]]
+      then
+        echo "There's no point rendering with less then 2GB of VRAM! It would produce too much out of memory errors. Falling back to CPU only rendering..."
+      fi
       GPU=false
       CPUs=$(( $CPUs + 1 ))
     fi
   fi
   if [[ $(( $AvailSpace + $SheepitSize )) -lt 2000000 ]]
   then
-    echo "At least 2GB disk space is required per instance for efficient operation. Aborting..."
+    if [[ $SilentMode == false ]]
+    then
+      echo "At least 2GB disk space is required per instance for efficient operation. Aborting..."
+    fi
     exit
   fi
   if [[ $CPU == true && $GPU == true && $(( $AvailSpace + $SheepitSize )) -lt 4000000 ]]
   then
-    echo "At least 2GB disk space is required per instance for efficient operation. Falling back to single client operation..."
+    if [[ $SilentMode == false ]]
+    then
+      echo "At least 2GB disk space is required per instance for efficient operation. Falling back to single client operation..."
+    fi
     ComputeMethod
   fi
   if [[ $MemAvailable -lt 5000000 ]]
   then
-    echo "Your system is low on memory! It can not run 2 instances of the client efficiently. Falling back to single client operation..."
+    if [[ $SilentMode == false ]]
+    then
+      echo "Your system is low on memory! It can not run 2 instances of the client efficiently. Falling back to single client operation..."
+    fi
     ComputeMethod
   fi
   if [[ $CPU == true && $GPU == true ]]
   then
-    AUTORAMGPU=$(( $MemAvailable - 1000000 ))
-    AUTORAMGPU=$(( $AUTORAMGPU / 2 ))
-    AUTORAMCPU=$(( 1000000 + $AUTORAMGPU ))
+    AUTORAMGPU=$(( $(( $GPUMem * 1000 )) + 500000 )) # Give it some more memory to work with...
+    AUTORAMCPU=$(( $MemAvailable - $AUTORAMGPU )) # Subtract that from avaiblable, and give the rest to the CPU instance.
   fi
   if [[ $CPU != true && $GPU == true ]]
   then
@@ -312,11 +368,14 @@ then
     fi
     cp ./sheepit-cpu.conf ./.sheepit-cpu.conf
     sed -i "s/AUTO_CORE_COUNT/$CPUs/g" ./.sheepit-cpu.conf
-    sed -i "s/AUTO_RAM/$AUTORAMCPU/g" ./.sheepit-cpu.conf
+    sed -i "s/AUTO_RAM/${AUTORAMCPU}k/g" ./.sheepit-cpu.conf
     HOSTNAME="$(uname -a | awk '{ print $2 }')_CPU"
     sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-cpu.conf
-    echo ""
-    echo "Auto-config for CPU instance: $CPUs CPU cores, and $(( $AUTORAMCPU / 1000 )) MB of memory."
+    if [[ $SilentMode == false ]]
+    then
+      echo ""
+      echo "Auto-config for CPU instance: $CPUs CPU cores, and $(( $AUTORAMCPU / 1000 )) MB of memory."
+    fi
   fi
   if [[ $CPU_GPU == true ]] # The CPU_GPU instance uses WD_CPU and .sheepit-cpu.conf but it copies the .sheepit-cpu_gpu.conf not the .sheepit-cpu.conf The only difference is compute method and tile size...
   then
@@ -326,12 +385,15 @@ then
     fi
     cp ./sheepit-cpu_gpu.conf ./.sheepit-cpu.conf
     sed -i "s/AUTO_CORE_COUNT/$CPUs/g" ./.sheepit-cpu.conf
-    sed -i "s/AUTO_RAM/$AUTORAMCPU/g" ./.sheepit-cpu.conf
+    sed -i "s/AUTO_RAM/${AUTORAMCPU}k/g" ./.sheepit-cpu.conf
     HOSTNAME="$(uname -a | awk '{ print $2 }')"
     sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-cpu.conf
     sed -i "s/GPUID/$GPUID/g" ./.sheepit-cpu.conf
-    echo ""
-    echo "Auto-config for single instance: $CPUs CPU cores, and $(( $AUTORAMCPU / 1000 )) MB of memory, and will render with either CPU or GPU."
+    if [[ $SilentMode == false ]]
+    then
+      echo ""
+      echo "Auto-config for single instance: $CPUs CPU cores, and $(( $AUTORAMCPU / 1000 )) MB of memory, and will render with either CPU or GPU."
+    fi
   fi
   if [[ $GPU == true ]]
   then
@@ -340,12 +402,15 @@ then
       rm -f ./.sheepit-gpu.conf
     fi
     cp ./sheepit-gpu.conf ./.sheepit-gpu.conf
-    sed -i "s/AUTO_RAM/$AUTORAMGPU/g" ./.sheepit-gpu.conf
+    sed -i "s/AUTO_RAM/${AUTORAMGPU}k/g" ./.sheepit-gpu.conf
     HOSTNAME="$(uname -a | awk '{ print $2 }')_GPU"
     sed -i "s/HOSTNAME/$HOSTNAME/g" ./.sheepit-gpu.conf
     sed -i "s/GPUID/$GPUID/g" ./.sheepit-gpu.conf
-    echo ""
-    echo "Auto-config for GPU instance: 1 CPU cores, and $(( $AUTORAMGPU / 1000 )) MB of memory."
+    if [[ $SilentMode == false ]]
+    then
+      echo ""
+      echo "Auto-config for GPU instance: 1 CPU cores, and $(( $AUTORAMGPU / 1000 )) MB of memory."
+    fi
   fi
 else
   if [[ -z $(grep "AUTO_RAM" "$(pwd)/sheepit-cpu_gpu.conf") && -z $(grep "AUTO_CORE_COUNT" "$(pwd)/sheepit-cpu_gpu.conf") && $GPU == true ]] # in case of manual config if there is GPU it will be true
@@ -382,7 +447,10 @@ else
   fi
   if [[ $CPU == false && $GPU == false && $CPU_GPU == false ]]
   then
-    echo "Error: None of the config files are complete, and ManualConfig is set! (Or GPU not recognized... Make sure you have the latest proprietary driver!) Aborting..."
+    if [[ $SilentMode == false ]]
+    then
+      echo "Error: None of the config files are complete, and ManualConfig is set! (Or GPU not recognized... Make sure you have the latest proprietary driver!) Aborting..."
+    fi
     exit
   fi
 fi
@@ -432,92 +500,150 @@ then
 fi
 
 # Displaying final config...
-if [[ $CPU == true ]]
+if [[ $SilentMode == false ]]
 then
-  echo ""
-  echo "CPU instance final configuration:"
-  X=0
-  for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
-  do
-    Y=$(grep "$i" "$(pwd)/.sheepit-cpu.conf")
-    CfCPU[$X]=$(echo ${Y##*=})
-    case $X
-    in
-                  "0" ) :
-                        ;;
-                  "1" ) echo "  Login as user: ${CfCPU[$X]}"
-                        ;;
-                  "2" ) echo "  Proxy: ${CfCPU[$X]}"
-                        ;;
-                  "3" ) echo "  Assigned CPU cores: ${CfCPU[$X]}"
-                        ;;
-                  "4" ) echo "  Assigned memory: $(( ${CfCPU[$X]} / 1000 )) MB"
-                        ;;
-                  "5" ) echo "  Tile size: ${CfCPU[$X]}"
-                        ;;
-                     *) echo "  Error: Unknown option at: case $X!"
-                        ;;
-    esac
-    X=$(( $X + 1 ))
-  done
-fi
-if [[ $CPU_GPU == true ]]
-then
-  echo ""
-  echo "Final configuration:"
-  X=0
-  for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
-  do
-    Y=$(grep "$i" "$(pwd)/.sheepit-cpu_gpu.conf")
-    CfCPU[$X]=$(echo ${Y##*=})
-    case $X
-    in
-                  "0" ) :
-                        ;;
-                  "1" ) echo "  Login as user: ${CfCPU[$X]}"
-                        ;;
-                  "2" ) echo "  Proxy: ${CfCPU[$X]}"
-                        ;;
-                  "3" ) echo "  Assigned CPU cores: ${CfCPU[$X]}"
-                        ;;
-                  "4" ) echo "  Assigned memory: $(( ${CfCPU[$X]} / 1000 )) MB"
-                        ;;
-                  "5" ) echo "  Tile size: ${CfCPU[$X]}"
-                        ;;
-                     *) echo "  Error: Unknown option at: case $X!"
-                        ;;
-    esac
-    X=$(( $X + 1 ))
-  done
-fi
-if [[ $GPU == true ]]
-then
-  echo ""
-  echo "GPU instance final configuration:"
-  X=0
-  for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
-  do
-    Y=$(grep "$i" "$(pwd)/.sheepit-gpu.conf")
-    CfGPU[$X]=$(echo ${Y##*=})
-    case $X
-    in
-                  "0" ) :
-                        ;;
-                  "1" ) echo "  Login as user: ${CfGPU[$X]}"
-                        ;;
-                  "2" ) echo "  Proxy: ${CfGPU[$X]}"
-                        ;;
-                  "3" ) echo "  Assigned CPU cores: ${CfGPU[$X]}"
-                        ;;
-                  "4" ) echo "  Assigned memory: $(( ${CfGPU[$X]} / 1000 )) MB"
-                        ;;
-                  "5" ) echo "  Tile size: ${CfGPU[$X]}"
-                        ;;
-                     *) echo "  Error: Unknown option at: case $X!"
-                        ;;
-    esac
-    X=$(( $X + 1 ))
-  done
+  if [[ $CPU == true ]]
+  then
+    echo ""
+    echo "CPU instance final configuration:"
+    X=0
+    for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
+    do
+      Y=$(grep "$i" "$(pwd)/.sheepit-cpu.conf")
+      CfCPU[$X]=$(echo ${Y##*=})
+      if [[ $i == "ram" ]]
+      then
+        CfCPU[$X]=${CfCPU[$X]:0:-1}
+      fi
+      case $X
+      in
+                    "0" ) :
+                          ;;
+                    "1" ) echo "  Login as user: ${CfCPU[$X]}"
+                          ;;
+                    "2" ) echo "  Proxy: ${CfCPU[$X]}"
+                          ;;
+                    "3" ) echo "  Assigned CPU cores: ${CfCPU[$X]}"
+                          ;;
+                    "4" ) echo "  Assigned memory: $(( ${CfCPU[$X]} / 1000 )) MB"
+                          ;;
+                    "5" ) echo "  Tile size: ${CfCPU[$X]}"
+                          ;;
+                       *) echo "  Error: Unknown option at: case $X!"
+                          ;;
+      esac
+      X=$(( $X + 1 ))
+    done
+  fi
+  if [[ $CPU_GPU == true ]]
+  then
+    echo ""
+    echo "Final configuration:"
+    X=0
+    for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
+    do
+      Y=$(grep "$i" "$(pwd)/.sheepit-cpu_gpu.conf")
+      CfCPU[$X]=$(echo ${Y##*=})
+      if [[ $i == "ram" ]]
+      then
+        CfCPU[$X]=${CfCPU[$X]:0:-1}
+      fi
+      case $X
+      in
+                    "0" ) :
+                          ;;
+                    "1" ) echo "  Login as user: ${CfCPU[$X]}"
+                          ;;
+                    "2" ) echo "  Proxy: ${CfCPU[$X]}"
+                          ;;
+                    "3" ) echo "  Assigned CPU cores: ${CfCPU[$X]}"
+                          ;;
+                    "4" ) echo "  Assigned memory: $(( ${CfCPU[$X]} / 1000 )) MB"
+                          ;;
+                    "5" ) echo "  Tile size: ${CfCPU[$X]}"
+                          ;;
+                       *) echo "  Error: Unknown option at: case $X!"
+                          ;;
+      esac
+      X=$(( $X + 1 ))
+    done
+  fi
+  if [[ $GPU == true ]]
+  then
+    echo ""
+    echo "GPU instance final configuration:"
+    X=0
+    for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
+    do
+      Y=$(grep "$i" "$(pwd)/.sheepit-gpu.conf")
+      CfGPU[$X]=$(echo ${Y##*=})
+      if [[ $i == "ram" ]]
+      then
+        CfGPU[$X]=${CfGPU[$X]:0:-1}
+      fi
+      case $X
+      in
+                    "0" ) :
+                          ;;
+                    "1" ) echo "  Login as user: ${CfGPU[$X]}"
+                          ;;
+                    "2" ) echo "  Proxy: ${CfGPU[$X]}"
+                          ;;
+                    "3" ) echo "  Assigned CPU cores: ${CfGPU[$X]}"
+                          ;;
+                    "4" ) echo "  Assigned memory: $(( ${CfGPU[$X]} / 1000 )) MB"
+                          ;;
+                    "5" ) echo "  Tile size: ${CfGPU[$X]}"
+                          ;;
+                       *) echo "  Error: Unknown option at: case $X!"
+                          ;;
+      esac
+      X=$(( $X + 1 ))
+    done
+  fi
+else # Not displaying in silent mode, but still need that array for error checking...
+  if [[ $CPU == true ]]
+  then
+    X=0
+    for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
+    do
+      Y=$(grep "$i" "$(pwd)/.sheepit-cpu.conf")
+      CfCPU[$X]=$(echo ${Y##*=})
+      if [[ $i == "ram" ]]
+      then
+        CfCPU[$X]=${CfCPU[$X]:0:-1}
+      fi
+      X=$(( $X + 1 ))
+    done
+  fi
+  if [[ $CPU_GPU == true ]]
+  then
+    X=0
+    for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
+    do
+      Y=$(grep "$i" "$(pwd)/.sheepit-cpu_gpu.conf")
+      CfCPU[$X]=$(echo ${Y##*=})
+      if [[ $i == "ram" ]]
+      then
+        CfCPU[$X]=${CfCPU[$X]:0:-1}
+      fi
+      X=$(( $X + 1 ))
+    done
+  fi
+  if [[ $GPU == true ]]
+  then
+    X=0
+    for i in "cache-dir" "login" "proxy" "cpu-cores" "ram" "tile-size"
+    do
+      Y=$(grep "$i" "$(pwd)/.sheepit-gpu.conf")
+      CfGPU[$X]=$(echo ${Y##*=})
+      if [[ $i == "ram" ]]
+      then
+        CfGPU[$X]=${CfGPU[$X]:0:-1}
+      fi
+      X=$(( $X + 1 ))
+    done
+  fi
 fi
 
 # Error checking
@@ -525,56 +651,96 @@ if [[ $CPU == true && $GPU == true ]]
 then
   if [[ ${CfCPU[0]} == ${CfGPU[0]} ]]
   then
-    echo "Error: The working directory can not be the same directory! The 2 instance would interfere and crash..."
-    exit
+    if [[ $SilentMode == true ]]
+    then
+      exit
+    else
+      echo "Error: The working directory can not be the same directory! The 2 instance would interfere and crash..."
+      exit
+    fi
   fi
   if [[ ${CfCPU[3]} -gt $CPUs ]]
   then
-    echo "Error: You need at least 1 CPU core for feeding the GPU with data unless you disable your GPU..."
-    exit
+    if [[ $SilentMode == true ]]
+    then
+      exit
+    else
+      echo "Error: You need at least 1 CPU core for feeding the GPU with data unless you disable your GPU..."
+      exit
+    fi
   fi
   if [[ $(( ${CfCPU[3]} + ${CfGPU[3]} )) -gt $(( $CPUs + 1 )) ]]
   then
-    echo "Error: You have specified more CPU cores overall then the CPU actually has!"
-    exit
+    if [[ $SilentMode == true ]]
+    then
+      exit
+    else
+      echo "Error: You have specified more CPU cores overall then the CPU actually has!"
+      exit
+    fi
   fi
   if [[ $(( ${CfCPU[4]} + ${CfGPU[4]} )) -gt $MemAvailable ]]
   then
-    echo "Error: You have specified more RAM overall then the total availabel memory of your machine!"
-    exit
+    if [[ $SilentMode == true ]]
+    then
+      exit
+    else
+      echo "Error: You have specified more RAM overall then the total availabel memory of your machine!"
+      exit
+    fi
   fi
 fi
 if [[ $CPU == true || $CPU_GPU == true ]]
 then
   if [[ ${CfCPU[3]} -gt $CPUs ]]
   then
-    echo "Error: You have specified more CPU cores then the CPU actually has!"
-    exit
+    if [[ $SilentMode == true ]]
+    then
+      exit
+    else
+      echo "Error: You have specified more CPU cores then the CPU actually has!"
+      exit
+    fi
   fi
   if [[ ${CfCPU[4]} -gt $MemAvailable ]]
   then
-    echo "Error: You have specified more RAM then the availabel memory of your machine!"
-    exit
+    if [[ $SilentMode == true ]]
+    then
+      exit
+    else
+      echo "Error: You have specified more RAM then the availabel memory of your machine!"
+      exit
+    fi
   fi
 fi
 if [[ $GPU == true ]]
 then
   if [[ ${CfGPU[3]} -gt $CPUs ]]
   then
-    echo "Error: You have specified more CPU cores then the CPU actually has!"
-    exit
+    if [[ $SilentMode == true ]]
+    then
+      exit
+    else
+      echo "Error: You have specified more CPU cores then the CPU actually has!"
+      exit
+    fi
   fi
   if [[ ${CfGPU[4]} -gt $MemAvailable ]]
   then
-    echo "Error: You have specified more RAM then the availabel memory of your machine!"
-    exit
+    if [[ $SilentMode == true ]]
+    then
+      exit
+    else
+      echo "Error: You have specified more RAM then the availabel memory of your machine!"
+      exit
+    fi
   fi
 fi
 
 # Launching processes (gnome-terminal -e option gave deprecated error, so I'm only using that command to open multiple terminals...)
 echo ""
 echo "Launching client instance(s)!"
-if [[ $CommandLine == false ]]
+if [[ $CommandLine == false && $SilentMode == false ]]
 then
   if [[ $GPU == true ]]
   then
@@ -687,107 +853,125 @@ then
       sleep 3
     fi
   done
-else ### Command Line ###
-  if [[ $GPU == true ]]
+else ### Silent Mode ###
+  if [[ $SilentMode == true ]]
   then
-    if [[ -z "$(pwd)/.SilencerGPU" ]]
+    if [[ $GPU == true ]]
     then
-      touch $(pwd)/.SilencerGPU
-    else
-      echo -n "" > "$(pwd)/.SilencerGPU"
-    fi
-    if [[ $Permission == true ]]
-    then
-      sudo -u $SUDO_USER java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-gpu.conf > $(pwd)/.SilencerGPU&
-    else
-      java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-gpu.conf > $(pwd)/.SilencerGPU&
-    fi
-  fi
-  if [[ $CPU == true || $CPU_GPU == true ]]
-  then
-    if [[ -z "$(pwd)/.SilencerCPU" ]]
-    then
-      touch $(pwd)/.SilencerCPU
-    else
-      echo -n "" > "$(pwd)/.SilencerCPU"
-    fi
-    if [[ $Permission == true ]]
-    then
-      sudo -u $SUDO_USER java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-cpu.conf > $(pwd)/.SilencerCPU&
-    else
-      java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-cpu.conf > $(pwd)/.SilencerCPU&
-    fi
-  fi
-  echo ""
-  echo "Temperatures should generally be below 80 degrees C or 176 degrees F even after about 30 minutes under full load. If it ever goes over that, you should stop rendering and try:"
-  echo "  1. Cleaning the machine of dust."
-  echo "  2. Change the thermal paste."
-  echo "  3. Leave the case open."
-  echo "  4. Put the machine in a cooler environment."
-  echo "  5. If none of this work, buy an adequate cooler, or just don't render."
-  sleep 15
-  while [[ $TempMon == true || $Facepalm == true ]]
-  do
-    clear
-    if [[ $TempMon == true ]]
-    then
-      inxi -s
-    fi
-     # There is basically no good way to stop the client when it was started in command line, so the script simply kills the process.
-    if [[ $Facepalm == true ]]
-    then
-      if [[ -f "$(pwd)/.SilencerCPU" ]]
+      if [[ $Permission == false ]]
       then
-        echo ""
-        if [[ $CPU_GPU == true ]]
+        java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-gpu.conf > /dev/null&
+      fi
+    fi
+    if [[ $CPU == true || $CPU_GPU == true ]]
+    then
+      if [[ $Permission == false ]]
+      then
+        java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-cpu.conf > /dev/null&
+      fi
+    fi
+  else ### Command Line ###
+    if [[ $GPU == true ]]
+    then
+      if [[ ! -f "$(pwd)/.SilencerGPU" ]]
+      then
+        touch $(pwd)/.SilencerGPU
+      else
+        echo -n "" > "$(pwd)/.SilencerGPU"
+      fi
+      if [[ $Permission == true ]]
+      then
+        sudo -u $SUDO_USER java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-gpu.conf > $(pwd)/.SilencerGPU&
+      else
+        java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-gpu.conf > $(pwd)/.SilencerGPU&
+      fi
+    fi
+    if [[ $CPU == true || $CPU_GPU == true ]]
+    then
+      if [[ ! -f "$(pwd)/.SilencerCPU" ]]
+      then
+        touch $(pwd)/.SilencerCPU
+      else
+        echo -n "" > "$(pwd)/.SilencerCPU"
+      fi
+      if [[ $Permission == true ]]
+      then
+        sudo -u $SUDO_USER java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-cpu.conf > $(pwd)/.SilencerCPU&
+      else
+        java -jar $(pwd)/sheepit-client-*.jar -config $(pwd)/.sheepit-cpu.conf > $(pwd)/.SilencerCPU&
+      fi
+    fi
+    echo ""
+    echo "Temperatures should generally be below 80 degrees C or 176 degrees F even after about 30 minutes under full load. If it ever goes over that, you should stop rendering and try:"
+    echo "  1. Cleaning the machine of dust."
+    echo "  2. Change the thermal paste."
+    echo "  3. Leave the case open."
+    echo "  4. Put the machine in a cooler environment."
+    echo "  5. If none of this work, buy an adequate cooler, or just don't render."
+    sleep 15
+    while [[ $TempMon == true || $Facepalm == true ]]
+    do
+      clear
+      if [[ $TempMon == true ]]
+      then
+        inxi -s
+      fi
+       # There is basically no good way to stop the client when it was started in command line, so the script simply kills the process.
+      if [[ $Facepalm == true ]]
+      then
+        if [[ -f "$(pwd)/.SilencerCPU" ]]
         then
-          echo "CPU/GPU instance(last 5 lines):"
-        else
-          echo "CPU instance(last 5 lines):"
+          echo ""
+          if [[ $CPU_GPU == true ]]
+          then
+            echo "CPU/GPU instance(last 5 lines):"
+          else
+            echo "CPU instance(last 5 lines):"
+          fi
+          tail -n 5 "$(pwd)/.SilencerCPU"
         fi
-        tail -n 5 "$(pwd)/.SilencerCPU"
-      fi
-      if [[ -f "$(pwd)/.SilencerGPU" ]]
-      then
+        if [[ -f "$(pwd)/.SilencerGPU" ]]
+        then
+          echo ""
+          echo "GPU instance(last 5 lines):"
+          tail -n 5 "$(pwd)/.SilencerGPU"
+        fi
         echo ""
-        echo "GPU instance(last 5 lines):"
-        tail -n 5 "$(pwd)/.SilencerGPU"
+        read -t 3 -p "Type \"q\" for quit (and hit enter): " Quit
+        if [[ $Quit == "q" ]]
+        then
+          Kill="$(ps -aux | grep "sheepit" | grep -v "grep" | grep -v "sudo" | awk '{ print $2 }')"
+          for i in GPU CPU
+          do
+            X=$(eval "echo \"\$Term$(echo $i)\"")
+            if [[ ! -z "$X" ]]
+            then
+              Kill="$Kill $(ps -e | grep "${X:5:5}" | grep -v "grep" | awk '{ print $1 }')"
+            fi
+          done
+          kill $Kill
+          for i in $(ls "$(pwd)/WD-CPU")
+          do
+            Ext="${i##*.}"
+            if [[ $Ext != "zip" ]]
+            then
+              rm -Rf "$(pwd)/WD-CPU/$i"
+            fi
+          done
+          for i in $(ls "$(pwd)/WD-GPU")
+          do
+            Ext="${i##*.}"
+            if [[ $Ext != "zip" ]]
+            then
+              rm -Rf "$(pwd)/WD-GPU/$i"
+            fi
+          done
+          rm -Rf /tmp/sheepit*
+          exit
+        fi
+      else
+        sleep 3
       fi
-      echo ""
-      read -t 3 -p "Type \"q\" for quit (and hit enter): " Quit
-      if [[ $Quit == "q" ]]
-      then
-        Kill="$(ps -aux | grep "sheepit" | grep -v "grep" | grep -v "sudo" | awk '{ print $2 }')"
-        for i in GPU CPU
-        do
-          X=$(eval "echo \"\$Term$(echo $i)\"")
-          if [[ ! -z "$X" ]]
-          then
-            Kill="$Kill $(ps -e | grep "${X:5:5}" | grep -v "grep" | awk '{ print $1 }')"
-          fi
-        done
-        kill $Kill
-        for i in $(ls "$(pwd)/WD-CPU")
-        do
-          Ext="${i##*.}"
-          if [[ $Ext != "zip" ]]
-          then
-            rm -Rf "$(pwd)/WD-CPU/$i"
-          fi
-        done
-        for i in $(ls "$(pwd)/WD-GPU")
-        do
-          Ext="${i##*.}"
-          if [[ $Ext != "zip" ]]
-          then
-            rm -Rf "$(pwd)/WD-GPU/$i"
-          fi
-        done
-        rm -Rf /tmp/sheepit*
-        exit
-      fi
-    else
-      sleep 3
-    fi
-  done
+    done
+  fi
 fi

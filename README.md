@@ -1,4 +1,4 @@
-Current version: 1.1(still beta...)
+Current version: 1.2(still beta...)
 
 The script runs fine on both of my machines, but it is NOT fully tested! This is intended to be fully automated for lazy people like I am... :P (Sorry Windows/mac/other linux users, I'm not really an expert, bash is the language I know best, I've written it for myself primarily. It may or may not work on other linux distros, but it's open source you can fork it if you want or just use ubuntu. :P)
 - Currently only runs on Ubuntu desktop... It can't open terminals in CLI, thus will fail to run. I may make a less fancy CLI option if necessary...
@@ -8,6 +8,12 @@ The script runs fine on both of my machines, but it is NOT fully tested! This is
 - The client now supports AMD GPUs, but the script doesn't... (because I don't have one to thinker with... maybe later)
 
 New features in:
+V1.2
+  - Client updated
+  - Fixed an issue with the new client: Config file got updated, and memory value was not recognized...
+  - Memory alocation algorithm improved.
+  - Added -s option for compatibility with my Systemd-Service-Generator script to make it run automatically at startup. (Check the help for conficuration tips...)
+
 V1.1.1:
   - Client updated
   - Slight change in config file reuslted to the only 1 client launching... It's fixed now
