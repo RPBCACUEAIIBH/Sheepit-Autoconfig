@@ -300,14 +300,12 @@ then
       fi
       exit
     fi
-    if [[ -z $(git branch | grep "Old") ]]
+    CurrentBranch=$(git branch | awk '{ print $2 }')
+    if [[ -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
       git branch -d Old
     fi
-    CurrentBranch=$(git branch | awk '{ print $2 }')
-    git add -A
-    git commit -a -m $RANDOM
-    if [[ $CurrentBranch != "master" ]]
+    if [[ $CurrentBranch != "Old" ]]
     then
       git branch -m Old
     fi
@@ -348,14 +346,12 @@ then
       fi
       exit
     fi
-    if [[ -z $(git branch | grep "Old") ]]
+    CurrentBranch=$(git branch | awk '{ print $2 }')
+    if [[ -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
       git branch -d Old
     fi
-    CurrentBranch=$(git branch | awk '{ print $2 }')
-    git add -A
-    git commit -a -m $RANDOM
-    if [[ $CurrentBranch != "master" ]]
+    if [[ $CurrentBranch != "Old" ]]
     then
       git branch -m Old
     fi
@@ -391,17 +387,17 @@ if [[ $UpdateClient == true ]]
 then
   if [[ $Permission == true && ! -z $SUDO_USER ]]
   then
-    if [[ ! -d ./.Latest ]]
+    if [[ ! -d ./Latest ]]
     then
-      mkdir ./.Latest
+      mkdir ./Latest
     else
-      rm -f ./.Latest/*
+      rm -f ./Latest/*
     fi
-    if [[ ! -d ./.Old ]]
+    if [[ ! -d ./Old ]]
     then
-      mkdir ./.Old
+      mkdir ./Old
     fi
-    cd ./.Latest
+    cd ./Latest
     wget "https://www.sheepit-renderfarm.com/media/applet/client-latest.php" -O sheepit-client-latest.jar
     LatestClientSum=$(md5sum ./sheepit-client*.jar)
     cd ..
@@ -413,11 +409,11 @@ then
         echo "Client is already the latest!"
       fi
     else
-      rm -f ./.Old/*
-      mv ./sheepit-client*.jar ./.Old/sheepit-client-old.jar
+      rm -f ./Old/*
+      mv ./sheepit-client*.jar ./Old/sheepit-client-old.jar
       mv ./Latest/sheepit-client*.jar ./sheepit-client-current.jar
       chown $SUDO_USER:$SUDO_USER ./sheepit-client-current.jar
-      chown -R $SUDO_USER:$SUDO_USER ./.Old
+      chown -R $SUDO_USER:$SUDO_USER ./Old
       chmod +x ./sheepit-client-current.jar
       rm -r ./Latest
       if [[ $SilentMode == false ]]
@@ -428,17 +424,17 @@ then
   fi
   if [[ $Permission == false ]]
   then
-    if [[ ! -d ./.Latest ]]
+    if [[ ! -d ./Latest ]]
     then
-      mkdir ./.Latest
+      mkdir ./Latest
     else
-      rm -f ./.Latest/*
+      rm -f ./Latest/*
     fi
-    if [[ ! -d ./.Old ]]
+    if [[ ! -d ./Old ]]
     then
-      mkdir ./.Old
+      mkdir ./Old
     fi
-    cd ./.Latest
+    cd ./Latest
     wget "https://www.sheepit-renderfarm.com/media/applet/client-latest.php" -O sheepit-client-latest.jar
     LatestClientSum=$(md5sum ./sheepit-client*.jar)
     cd ..
@@ -450,8 +446,8 @@ then
         echo "Client is already the latest!"
       fi
     else
-      rm -f ./.Old/*
-      mv ./sheepit-client*.jar ./.Old/sheepit-client-old.jar
+      rm -f ./Old/*
+      mv ./sheepit-client*.jar ./Old/sheepit-client-old.jar
       mv ./Latest/sheepit-client*.jar ./sheepit-client-current.jar
       sudo chmod +x ./sheepit-client-current.jar
       rm -r ./Latest
@@ -488,11 +484,10 @@ then
     exit
   fi
   CurrentBranch=$(git branch | awk '{ print $2 }')
+  git add -A
+  git commit -a -m $RANDOM
   git checkout Old
-  if [[ $CurrentBranch != "master" ]]
-  then
-    git branch -d $CurrentBranch
-  fi
+  git branch -d $CurrentBranch
   if [[ $SilentMode == false ]]
   then
     echo "Reverted to old Autoconfig!"
@@ -503,7 +498,7 @@ if [[ $RevertClient == true ]]
 then
   if [[ $Permission == true && ! -z $SUDO_USER ]]
   then
-    if [[ ! -f ./.Old/sheepit-client-old.jar ]]
+    if [[ ! -f ./Old/sheepit-client-old.jar ]]
     then
       if [[ $SilentMode == false ]]
       then
@@ -511,7 +506,7 @@ then
       fi
     else
       rm -f ./sheepit-client*.jar
-      mv ./.Old/sheepit-client-old.jar ./sheepit-client-current.jar
+      mv ./Old/sheepit-client-old.jar ./sheepit-client-current.jar
       if [[ ! -z $SUDO_USER ]]
       then
         chown $SUDO_USER:$SUDO_USER ./sheepit-client-current.jar
@@ -525,7 +520,7 @@ then
   fi
   if [[ $Permission == false ]]
   then
-    if [[ ! -f ./.Old/sheepit-client-old.jar ]]
+    if [[ ! -f ./Old/sheepit-client-old.jar ]]
     then
       if [[ $SilentMode == false ]]
       then
@@ -533,7 +528,7 @@ then
       fi
     else
       rm -f ./sheepit-client*.jar
-      mv ./.Old/sheepit-client-old.jar ./sheepit-client-current.jar
+      mv ./Old/sheepit-client-old.jar ./sheepit-client-current.jar
       sudo chmod +x ./sheepit-client-current.jar
       if [[ $SilentMode == false ]]
       then
