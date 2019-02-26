@@ -481,18 +481,19 @@ then
     fi
     exit
   fi
-  if [[ $(git branch | awk '{ print $2 }') == "Old" ]]
+  CurrentBranch=$(git branch | awk '{ print $2 }')
+  git add -A
+  git commit -a -m $RANDOM
+  if [[ $CurrentBranch != "Old" ]]
   then
+    git checkout Old
+  else
     if [[ $SilentMode == false ]]
     then
       echo "This is the old version!"
     fi
     exit
   fi
-  CurrentBranch=$(git branch | awk '{ print $2 }')
-  git add -A
-  git commit -a -m $RANDOM
-  git checkout Old
   git branch -d $CurrentBranch
   if [[ $SilentMode == false ]]
   then
