@@ -1,14 +1,19 @@
-Current version: 1.2(still beta...)
+Current version: 1.3(still beta...)
 
-The script runs fine on both of my machines, but it is NOT fully tested! This is intended to be fully automated for lazy people like I am... :P (Sorry Windows/mac/other linux users, I'm not really an expert, bash is the language I know best, I've written it for myself primarily. It may or may not work on other linux distros, but it's open source you can fork it if you want or just use ubuntu. :P)
-- Currently only runs on Ubuntu desktop... It can't open terminals in CLI, thus will fail to run. I may make a less fancy CLI option if necessary...
-- It does require sudo to install java if not found, and to be able to stop the client upon request! (As far as I know there is no way to interface the client, once it has been launched, it's out of the launcher's control, therefore it simply must kill the process in order to stop... Will fix then if and when the sheepit devs make it possible...)
+The script runs fine on both of my machines, but it is NOT fully tested! This is intended to be fully automated for lazy people like me... :P (Sorry Windows/Mac/other linux users for whom it doesn't work, I'm not really an expert... Bash is the language I know best, I've written it for myself primarily. It may or may or may not work on other linux distros, but it's open source you can fork it if you want or just use ubuntu. :P)
+- It does require sudo to install java, inxi and htop if not found! (As far as I know there is no way to interface the client, once it has been launched, it's out of the launcher's control, therefore it simply must kill the process in order to stop the client... Will fix then if and when the sheepit devs make it possible...)
 - Automatic values can be overridden by simply specifying a value in one or more of the config files. (There's a comment in the beginning of the script for more details...)
-- From time to time you may need to change the included client to a new official one... It should work fine, it's the third version I've used since I've started this project...
-- The client now supports AMD GPUs, and the script should theoretically also work with it, but I have no way of testing that since I do not have an AMD GPU to work with...
+- You may want to change the included client to a new official one... It should theretically work fine, but it's not guaranteed!
+- The client now supports AMD GPUs, and the script should theoretically also work with it, but I have no way of testing that since I only have a single nvidia GPU to work with... It is however only able to use a single GPU and/or CPU... No SLI/Crossfire, not even 2 GPU at a time without SLI/Crossfire...
+
+People expressed concern about the genuinity of the included client. Here's my answer to that:
+It was made primarily for my own convenience, and I want it to work whenever I download it whether or not the latest version of the client is compatible, so I will always include a working client. If you don't trust it you can replace it with the latest available official client from the sheepit site, it generally should work however it's not guaranteed. In 6 month or so I found 2 changes to be incompatible, which required modification of the script, so I can't really rely always on the latest client! That is exactly why the V1.3 feature was implemented!
 
 New features in:
-V1.2
+V1.3:
+  - Added Client and Script update and rollback possibility. (Thanks to M*C*O for the link to get the latest client!)
+
+V1.2:
   - Client updated
   - Fixed an issue with the new client: Config file got updated, and memory value was not recognized...
   - Memory alocation algorithm improved.

@@ -11,6 +11,10 @@ CommandLine=false
 SilentMode=false
 Facepalm=true # ...I should have tried killing processes without sudo in the first place.
 Permission=false
+UpdateScript=false
+UpdateClient=false
+RevertScript=false
+RevertClient=false
 CPU=true
 GPU=false
 CPU_GPU=false
@@ -18,7 +22,7 @@ Quit=""
 UserName="RPBCACUEAIIBH"
 Password="d5y7FgPYCQjrg9JP0iqqjt5AlCYXkGmiKcgCF0O8"
 Proxy=""
-Version=$(grep "Current version:" "$(pwd)/README.md")
+Version="$(grep "Current version:" "$(pwd)/README.md")"
 
 function NewTerminal
 {
@@ -95,17 +99,27 @@ do
                       shift
                       Password=$1
                       ;;
+               "-A" ) UpdateScript=true
+                      ;;
+              "-RA" ) RevertScript=true
+                      ;;
+               "-C" ) UpdateClient=true
+                      ;;
+              "-RC" ) RevertClient=true
+                      ;;
            "--help" ) echo ""
                       echo "Options"
                       echo "-c                         Specify this for command line operation.(Will launch the instances but not in new terminals... This runs via SSH, but will NOT continue running if you close the terminal.)"
+                      echo "-m                         Use manual config(only if at least one of the config files are completed...)"
                       echo "-s                         Silent mode... This will launch the instances without any feedback. no need to also specify -c option. (for compatibility with my Systemd-Service-Generator script, which *hopefuly* makes it run automatically at startup...)"
                       echo ""
-                      echo "-m                         Use manual config(only if at least one of the config files are completed...)"
-                      echo ""
                       echo "-p [proxy]                 Specify proxy"
-                      echo ""
                       echo "-u [username] [password]   Specify different user"
                       echo ""
+                      echo "-A                         Update Autoconfig script"
+                      echo "-RA                        Revert Autoconfig script to older version"
+                      echo "-C                         Update Sheepit client"
+                      echo "-RC                        Revert Sheepit client to older version"
                       echo ""
                       echo ""
                       echo "Specify options separately... For eample: It does not currently recognize -mu as separate options. you must specify them as -m -u"
@@ -188,6 +202,19 @@ else
   fi
 fi
 
+# Checking git
+if [[ -z $(git --version | grep "git version") ]]
+then
+  read -p "Git is required for update management! Do you want to install git?(y/n): " Yy
+  if [[ $Yy == [Yy]* ]]
+  then
+    sudo apt-get -y install git
+  else
+    echo "Aborting... Sheepit client won't work without java..."
+    exit
+  fi
+fi
+
 # Checking inxi
 if [[ -z $(dpkg -l | grep inxi) ]]
 then
@@ -254,6 +281,274 @@ else
   HTop=true
 fi
 
+# Update management
+if [[ $UpdateScript == true ]]
+then
+  if [[ $Permission == true && ! -z $SUDO_USER ]]
+  then
+    rm -Rf ./WD-CPU/*
+    rm -Rf ./WD-GPU/*
+    git clone https://www.github.com/RPBCACUEAIIBH/Sheepit-Autoconfig
+    rm -Rf ./Sheepit-Autoconfig/.git # Otherwise it gives a lecture about embedded git repos...
+    CloneVersion=$(grep "Current version:" "$(pwd)/README.md")
+    if [[ "$CloneVersion" == "$Version" ]]
+    then
+      rm -Rf ./Sheepit-Autoconfig
+      if [[ $SilentMode == false ]]
+      then
+        echo "Autoconfig is already up to date!"
+      fi
+      exit
+    fi
+    if [[ -z $(git branch | grep "Old") ]]
+    then
+      git branch -d Old
+    fi
+    CurrentBranch=$(git branch | awk '{ print $2 }')
+    git add -A
+    git commit -a -m $RANDOM
+    if [[ $CurrentBranch != "master" ]]
+    then
+      git branch -m Old
+    fi
+    if [[ ! -z $(git branch | grep "Current") ]]
+    then
+      git branch -d Current
+    fi
+    git branch Current
+    rm -Rf ./Sheepit-Autoconfig
+    git add -A
+    git commit -a -m $RANDOM
+    git checkout Current
+    cp -Rf ./Sheepit-Autoconfig/* ./
+    rm -Rf ./Sheepit-Autoconfig
+    chmod +x ./Launch.sh
+    chmod +x ./sheepit-client*.jar
+    chown -R $SUDO_USER:$SUDO_USER ./*
+    git add -A
+    git commit -a -m $RANDOM
+    if [[ $SilentMode == false ]]
+    then
+      echo "Autoconfig updated!"
+    fi
+  fi
+  if [[ $Permission == false ]]
+  then
+    rm -Rf ./WD-CPU/*
+    rm -Rf ./WD-GPU/*
+    git clone https://www.github.com/RPBCACUEAIIBH/Sheepit-Autoconfig
+    rm -Rf ./Sheepit-Autoconfig/.git # Otherwise it gives a lecture about embedded git repos...
+    CloneVersion=$(grep "Current version:" "$(pwd)/README.md")
+    if [[ "$CloneVersion" == "$Version" ]]
+    then
+      rm -Rf ./Sheepit-Autoconfig
+      if [[ $SilentMode == false ]]
+      then
+        echo "Autoconfig is already up to date!"
+      fi
+      exit
+    fi
+    if [[ -z $(git branch | grep "Old") ]]
+    then
+      git branch -d Old
+    fi
+    CurrentBranch=$(git branch | awk '{ print $2 }')
+    git add -A
+    git commit -a -m $RANDOM
+    if [[ $CurrentBranch != "master" ]]
+    then
+      git branch -m Old
+    fi
+    if [[ ! -z $(git branch | grep "Current") ]]
+    then
+      git branch -d Current
+    fi
+    git branch Current
+    rm -Rf ./Sheepit-Autoconfig
+    git add -A
+    git commit -a -m $RANDOM
+    git checkout Current
+    cp -Rf ./Sheepit-Autoconfig/* ./
+    rm -Rf ./Sheepit-Autoconfig
+    sudo chmod +x ./Launch.sh
+    sudo chmod +x ./sheepit-client*.jar
+    git add -A
+    git commit -a -m $RANDOM
+    if [[ $SilentMode == false ]]
+    then
+      echo "Autoconfig updated!"
+    fi
+  else
+    if [[ $SilentMode == false ]]
+    then
+      echo "Error: The script runs as root, and no \$SUDO_USER found! Aborting..."
+    fi
+    exit
+  fi
+fi
+
+if [[ $UpdateClient == true ]]
+then
+  if [[ $Permission == true && ! -z $SUDO_USER ]]
+  then
+    if [[ ! -d ./.Latest ]]
+    then
+      mkdir ./.Latest
+    else
+      rm -f ./.Latest/*
+    fi
+    if [[ ! -d ./.Old ]]
+    then
+      mkdir ./.Old
+    fi
+    cd ./.Latest
+    wget "https://www.sheepit-renderfarm.com/media/applet/client-latest.php" -O sheepit-client-latest.jar
+    LatestClientSum=$(md5sum ./sheepit-client*.jar)
+    cd ..
+    CurrentClientSum=$(md5sum ./sheepit-client*.jar)
+    if [[ $(echo "$LatestClientSum" | awk '{ print $1 }') == $(echo "$CurrentClientSum" | awk '{ print $1 }') ]]
+    then
+      if [[ $SilentMode == false ]]
+      then
+        echo "Client is already the latest!"
+      fi
+    else
+      rm -f ./.Old/*
+      mv ./sheepit-client*.jar ./.Old/sheepit-client-old.jar
+      mv ./Latest/sheepit-client*.jar ./sheepit-client-current.jar
+      chown $SUDO_USER:$SUDO_USER ./sheepit-client-current.jar
+      chown -R $SUDO_USER:$SUDO_USER ./.Old
+      chmod +x ./sheepit-client-current.jar
+      rm -r ./Latest
+      if [[ $SilentMode == false ]]
+      then
+        echo "Client updated!"
+      fi
+    fi
+  fi
+  if [[ $Permission == false ]]
+  then
+    if [[ ! -d ./.Latest ]]
+    then
+      mkdir ./.Latest
+    else
+      rm -f ./.Latest/*
+    fi
+    if [[ ! -d ./.Old ]]
+    then
+      mkdir ./.Old
+    fi
+    cd ./.Latest
+    wget "https://www.sheepit-renderfarm.com/media/applet/client-latest.php" -O sheepit-client-latest.jar
+    LatestClientSum=$(md5sum ./sheepit-client*.jar)
+    cd ..
+    CurrentClientSum=$(md5sum ./sheepit-client*.jar)
+    if [[ $(echo "$LatestClientSum" | awk '{ print $1 }') == $(echo "$CurrentClientSum" | awk '{ print $1 }') ]]
+    then
+      if [[ $SilentMode == false ]]
+      then
+        echo "Client is already the latest!"
+      fi
+    else
+      rm -f ./.Old/*
+      mv ./sheepit-client*.jar ./.Old/sheepit-client-old.jar
+      mv ./Latest/sheepit-client*.jar ./sheepit-client-current.jar
+      sudo chmod +x ./sheepit-client-current.jar
+      rm -r ./Latest
+      if [[ $SilentMode == false ]]
+      then
+        echo "Client updated!"
+      fi
+    fi
+  else
+    if [[ $SilentMode == false ]]
+    then
+      echo "Error: The script runs as root, and no \$SUDO_USER found! Aborting..."
+    fi
+    exit
+  fi
+fi
+
+if [[ $RevertScript == true ]]
+then
+  if [[ -z $(git branch | grep "Old") ]]
+  then
+    if [[ $SilentMode == false ]]
+    then
+      echo "Error: No older version found!"
+    fi
+    exit
+  fi
+  if [[ $(git branch | awk '{ print $2 }') == "Old" ]]
+  then
+    if [[ $SilentMode == false ]]
+    then
+      echo "This is the old version!"
+    fi
+    exit
+  fi
+  CurrentBranch=$(git branch | awk '{ print $2 }')
+  git checkout Old
+  if [[ $CurrentBranch != "master" ]]
+  then
+    git branch -d $CurrentBranch
+  fi
+  if [[ $SilentMode == false ]]
+  then
+    echo "Reverted to old Autoconfig!"
+  fi
+fi
+
+if [[ $RevertClient == true ]]
+then
+  if [[ $Permission == true && ! -z $SUDO_USER ]]
+  then
+    if [[ ! -f ./.Old/sheepit-client-old.jar ]]
+    then
+      if [[ $SilentMode == false ]]
+      then
+        echo "Error: No older version found! Can't revert!"
+      fi
+    else
+      rm -f ./sheepit-client*.jar
+      mv ./.Old/sheepit-client-old.jar ./sheepit-client-current.jar
+      if [[ ! -z $SUDO_USER ]]
+      then
+        chown $SUDO_USER:$SUDO_USER ./sheepit-client-current.jar
+      fi
+      chmod +x ./sheepit-client-current.jar
+      if [[ $SilentMode == false ]]
+      then
+        echo "Reverted to old client!"
+      fi
+    fi
+  fi
+  if [[ $Permission == false ]]
+  then
+    if [[ ! -f ./.Old/sheepit-client-old.jar ]]
+    then
+      if [[ $SilentMode == false ]]
+      then
+        echo "Error: No older version found! Can't revert!"
+      fi
+    else
+      rm -f ./sheepit-client*.jar
+      mv ./.Old/sheepit-client-old.jar ./sheepit-client-current.jar
+      sudo chmod +x ./sheepit-client-current.jar
+      if [[ $SilentMode == false ]]
+      then
+        echo "Reverted to old client!"
+      fi
+    fi
+  else
+    if [[ $SilentMode == false ]]
+    then
+      echo "Error: The script runs as root, and no \$SUDO_USER found! Aborting..."
+    fi
+    exit
+  fi
+fi
+exit # DMark
 # Probing system and preparing for launch
 CPUs=$(grep -c ^processor /proc/cpuinfo)
 if [[ $SilentMode == false ]]
