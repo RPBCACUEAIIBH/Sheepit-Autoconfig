@@ -551,7 +551,7 @@ then
     exit
   fi
 fi
-exit # DMark
+
 # Probing system and preparing for launch
 CPUs=$(grep -c ^processor /proc/cpuinfo)
 if [[ $SilentMode == false ]]
