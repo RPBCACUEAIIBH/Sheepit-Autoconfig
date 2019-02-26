@@ -301,7 +301,7 @@ then
       exit
     fi
     CurrentBranch=$(git branch | awk '{ print $2 }')
-    if [[ -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
+    if [[ ! -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
       git branch -d Old
     fi
@@ -347,7 +347,8 @@ then
       exit
     fi
     CurrentBranch=$(git branch | awk '{ print $2 }')
-    if [[ -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
+echo "Debug 1: $CurrentBranch" # Debug
+    if [[ ! -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
       git branch -d Old
     fi
