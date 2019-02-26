@@ -301,7 +301,6 @@ then
       exit
     fi
     CurrentBranch=$(git branch | awk '{ print $2 }')
-echo "Debug 1: $CurrentBranch" # Debug
     if [[ ! -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
       git branch -d Old
@@ -331,6 +330,7 @@ echo "Debug 1: $CurrentBranch" # Debug
     if [[ $SilentMode == false ]]
     then
       echo "Autoconfig updated!"
+      exit # It must exit here otherwise it would malfunction!
     fi
   fi
   if [[ $Permission == false ]]
@@ -350,7 +350,6 @@ echo "Debug 1: $CurrentBranch" # Debug
       exit
     fi
     CurrentBranch=$(git branch | awk '{ print $2 }')
-echo "Debug 1: $CurrentBranch" # Debug
     if [[ ! -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
       git branch -d Old
@@ -379,6 +378,7 @@ echo "Debug 1: $CurrentBranch" # Debug
     if [[ $SilentMode == false ]]
     then
       echo "Autoconfig updated!"
+      exit # It must exit here otherwise it would malfunction!
     fi
   else
     if [[ $SilentMode == false ]]
