@@ -484,7 +484,7 @@ then
   CurrentBranch=$(git branch | awk '{ print $2 }')
   git add -A
   git commit -a -m $RANDOM
-  if [[ $CurrentBranch != "Old" ]]
+  if [[ $(echo $CurrentBranch) != "Old" ]]
   then
     git checkout Old
   else
@@ -494,7 +494,7 @@ then
     fi
     exit
   fi
-  git branch -D $CurrentBranch
+  git branch -D Current
   if [[ $SilentMode == false ]]
   then
     echo "Reverted to old Autoconfig!"
