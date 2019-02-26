@@ -116,13 +116,13 @@ do
                       echo "-p [proxy]                 Specify proxy"
                       echo "-u [username] [password]   Specify different user"
                       echo ""
-                      echo "-A                         Update Autoconfig script"
-                      echo "-RA                        Revert Autoconfig script to older version"
+                      echo "Specify options separately... For eample: It does not currently recognize -mu as separate options. you must specify them as -m -u"
+                      echo ""
+                      echo "-A                         Update Autoconfig script(Exits after execution!)"
+                      echo "-RA                        Revert Autoconfig script to older version(Exits after execution!)"
                       echo "-C                         Update Sheepit client"
                       echo "-RC                        Revert Sheepit client to older version"
-                      echo ""
-                      echo ""
-                      echo "Specify options separately... For eample: It does not currently recognize -mu as separate options. you must specify them as -m -u"
+                      echo "You have to update the script first then the client if you wanna update both!"
                       echo ""
                       echo "Since version 1.2 you can make it a systemd service and have your machine autoconfigure and connect automatically at startup!(you may not wanna do that if you're using the machine for anythng else...)"
                       echo "- Download my Systemd-Service-Generator script from github.com/RPBCACUEAIIBH/Systemd-Service-Generator"
@@ -497,6 +497,7 @@ then
   if [[ $SilentMode == false ]]
   then
     echo "Reverted to old Autoconfig!"
+    exit # It must exit here otherwise it would malfunction!
   fi
 fi
 
