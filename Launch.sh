@@ -288,7 +288,7 @@ then
   then
     rm -Rf ./WD-CPU/*
     rm -Rf ./WD-GPU/*
-    git clone https://www.github.com/RPBCACUEAIIBH/Sheepit-Autoconfig
+    git clone https://github.com/RPBCACUEAIIBH/Sheepit-Autoconfig.git
     rm -Rf ./Sheepit-Autoconfig/.git # Otherwise it gives a lecture about embedded git repos...
     CloneVersion=$(grep "Current version:" "$(pwd)/Sheepit-Autoconfig/README.md")
     if [[ "$CloneVersion" == "$Version" ]]
@@ -336,7 +336,7 @@ then
     rm -Rf ./WD-GPU/*
     git clone https://github.com/RPBCACUEAIIBH/Sheepit-Autoconfig.git
     rm -Rf ./Sheepit-Autoconfig/.git # Otherwise it gives a lecture about embedded git repos...
-    CloneVersion=$(grep "Current version:" "$(pwd)/README.md")
+    CloneVersion=$(grep "Current version:" "$(pwd)/Sheepit-Autoconfig/README.md")
     if [[ "$CloneVersion" == "$Version" ]]
     then
       rm -Rf ./Sheepit-Autoconfig
