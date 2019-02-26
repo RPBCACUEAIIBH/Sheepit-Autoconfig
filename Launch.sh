@@ -301,6 +301,7 @@ then
       exit
     fi
     CurrentBranch=$(git branch | awk '{ print $2 }')
+echo "Debug 1: $CurrentBranch" # Debug
     if [[ ! -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
       git branch -d Old
@@ -313,6 +314,8 @@ then
     then
       git branch -d Current
     fi
+    git add -A
+    git commit -a -m $RANDOM
     git branch Current
     rm -Rf ./Sheepit-Autoconfig
     git add -A
@@ -360,6 +363,8 @@ echo "Debug 1: $CurrentBranch" # Debug
     then
       git branch -d Current
     fi
+    git add -A
+    git commit -a -m $RANDOM
     git branch Current
     rm -Rf ./Sheepit-Autoconfig
     git add -A
