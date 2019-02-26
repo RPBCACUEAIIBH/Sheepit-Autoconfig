@@ -303,7 +303,7 @@ then
     CurrentBranch=$(git branch | awk '{ print $2 }')
     if [[ ! -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
-      git branch -d Old
+      git branch -D Old
     fi
     if [[ $CurrentBranch != "Old" ]]
     then
@@ -311,7 +311,7 @@ then
     fi
     if [[ ! -z $(git branch | grep "Current") ]]
     then
-      git branch -d Current
+      git branch -D Current
     fi
     git add -A
     git commit -a -m $RANDOM
@@ -352,7 +352,7 @@ then
     CurrentBranch=$(git branch | awk '{ print $2 }')
     if [[ ! -z $(git branch | grep "Old") && $CurrentBranch != "Old" ]]
     then
-      git branch -d Old
+      git branch -D Old
     fi
     if [[ $CurrentBranch != "Old" ]]
     then
@@ -360,7 +360,7 @@ then
     fi
     if [[ ! -z $(git branch | grep "Current") ]]
     then
-      git branch -d Current
+      git branch -D Current
     fi
     git add -A
     git commit -a -m $RANDOM
@@ -494,7 +494,7 @@ then
     fi
     exit
   fi
-  git branch -d $CurrentBranch
+  git branch -D $CurrentBranch
   if [[ $SilentMode == false ]]
   then
     echo "Reverted to old Autoconfig!"
